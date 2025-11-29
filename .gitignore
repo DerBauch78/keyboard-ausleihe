@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+ENV/
+env/
+
+# Flask
+instance/
+.webassets-cache
+
+# Datenbank
+data/
+*.db
+*.sqlite
+
+# Environment
+.env
+.env.local
+
+# Uploads (lokal)
+uploads/*
+!uploads/.gitkeep
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# macOS
+.DS_Store
+__MACOSX/
+
+# Docker
+*.log

@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}Schuljahre - Administration{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex justify-between items-center">
+        <h1 class="text-2xl font-bold text-gray-800">Schuljahre</h1>
+        <a href="{{ url_for('admin.new_school_year') }}" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+            + Neues Schuljahr
+        </a>
+    </div>
+
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        <table class="w-full">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-4 py-3 text-left text-sm font-medium text-gray-500">Name</th>
+                    <th class="px-4 py-3 text-left text-sm font-medium text-gray-500">Zeitraum</th>
+                    <th class="px-4 py-3 text-left text-sm font-medium text-gray-500">Klassen</th>
+                    <th class="px-4 py-3 text-center text-sm font-medium text-gray-500">Status</th>
+                    <th class="px-4 py-3 text-center text-sm font-medium text-gray-500">Aktionen</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+                {% for year in years %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-4 py-3 font-medium">{{ year.name }}</td>
+                    <td class="px-4 py-3 text-sm">{{ year.start_date.strftime('%d.%m.%Y') }} - {{ year.end_date.strftime('%d.%m.%Y') }}</td>
+                    <td class="px-4 py-3 text-sm">{{ year.classes.count() }} Klassen</td>
+                    <td class="px-4 py-3 text-center">
+                        {% if year.is_active %}
+                        <span class="bg-green-100 text-green-800 px-2 py-1 rounded text-xs">Aktiv</span>
+                        {% else %}
+                        <form method="POST" action="{{ url_for('admin.activate_school_year', id=year.id) }}" class="inline">
+                            <button type="submit" class="text-blue-600 hover:underline text-xs">Aktivieren</button>
+                        </form>
+                        {% endif %}
+                    </td>
+                    <td class="px-4 py-3 text-center">
+                        <a href="{{ url_for('admin.edit_school_year', id=year.id) }}" class="text-blue-600 hover:underline text-sm">Bearbeiten</a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5" class="px-4 py-8 text-center text-gray-500">
+                        Keine Schuljahre vorhanden.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}Administration - Keyboard-Ausleihe{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <h1 class="text-2xl font-bold text-gray-800">Administration</h1>
+
+    <div class="grid md:grid-cols-3 gap-6">
+        <!-- Schnellzugriff -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <h2 class="text-lg font-semibold text-gray-800 mb-4">Schnellzugriff</h2>
+            <div class="space-y-2">
+                <a href="{{ url_for('admin.school_year_transition') }}" class="block p-3 bg-yellow-50 hover:bg-yellow-100 rounded-lg transition border-2 border-yellow-200">
+                    🔄 Schuljahreswechsel
+                </a>
+                <a href="{{ url_for('admin.school_years') }}" class="block p-3 bg-blue-50 hover:bg-blue-100 rounded-lg transition">
+                    📅 Schuljahre verwalten
+                </a>
+                <a href="{{ url_for('admin.users') }}" class="block p-3 bg-green-50 hover:bg-green-100 rounded-lg transition">
+                    👥 Benutzer verwalten
+                </a>
+                <a href="{{ url_for('admin.audit_log') }}" class="block p-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition">
+                    📋 Audit-Log
+                </a>
+                <a href="{{ url_for('import_data.import_json') }}" class="block p-3 bg-purple-50 hover:bg-purple-100 rounded-lg transition">
+                    📥 Daten importieren (Excel/JSON)
+                </a>
+            </div>
+        </div>
+
+        <!-- Schuljahre -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <h2 class="text-lg font-semibold text-gray-800 mb-4">Schuljahre</h2>
+            {% if school_years %}
+            <ul class="space-y-2">
+                {% for year in school_years[:5] %}
+                <li class="flex justify-between items-center">
+                    <span>{{ year.name }}</span>
+                    {% if year.is_active %}
+                    <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">Aktiv</span>
+                    {% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="text-gray-500">Keine Schuljahre</p>
+            {% endif %}
+        </div>
+
+        <!-- Benutzer -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <h2 class="text-lg font-semibold text-gray-800 mb-4">Benutzer</h2>
+            <ul class="space-y-2">
+                {% for user in users[:5] %}
+                <li class="flex justify-between items-center text-sm">
+                    <span>{{ user.display_name or user.username }}</span>
+                    <span class="text-gray-500">{{ user.role }}</span>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+
+    <!-- Letzte Aktivitäten -->
+    <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-lg font-semibold text-gray-800">Letzte Aktivitäten</h2>
+            <a href="{{ url_for('admin.audit_log') }}" class="text-blue-600 hover:underline text-sm">Alle anzeigen →</a>
+        </div>
+        {% if recent_logs %}
+        <ul class="space-y-2 text-sm">
+            {% for log in recent_logs[:10] %}
+            <li class="flex justify-between items-center py-2 border-b border-gray-100">
+                <div>
+                    <span class="font-medium">{{ log.action }}</span>
+                    <span class="text-gray-500">- {{ log.details or log.entity_type }}</span>
+                </div>
+                <div class="text-gray-400">
+                    {% if log.user %}{{ log.user.username }}{% endif %}
+                    · {{ log.created_at.strftime('%d.%m. %H:%M') }}
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p class="text-gray-500">Keine Aktivitäten</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

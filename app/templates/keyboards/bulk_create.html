@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Keyboards Bulk-Anlage - Keyboard-Ausleihe{% endblock %}
+
+{% block content %}
+<div class="max-w-xl mx-auto">
+    <div class="bg-white rounded-lg shadow p-6">
+        <h1 class="text-2xl font-bold text-gray-800 mb-6">Keyboards Bulk-Anlage</h1>
+        <p class="text-gray-600 mb-6">Mehrere Keyboards auf einmal anlegen mit fortlaufenden Nummern.</p>
+        
+        <form method="POST" class="space-y-4">
+            <div>
+                <label for="prefix" class="block text-sm font-medium text-gray-700 mb-1">Präfix</label>
+                <input type="text" id="prefix" name="prefix" value="KB"
+                    class="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500">
+                <p class="text-xs text-gray-500 mt-1">z.B. "KB" ergibt KB001, KB002, ...</p>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label for="start" class="block text-sm font-medium text-gray-700 mb-1">Startnummer</label>
+                    <input type="number" id="start" name="start" value="1" min="1"
+                        class="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label for="count" class="block text-sm font-medium text-gray-700 mb-1">Anzahl</label>
+                    <input type="number" id="count" name="count" value="80" min="1" max="200"
+                        class="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-blue-500">
+                </div>
+            </div>
+            
+            <div class="bg-blue-50 border border-blue-200 rounded p-4 text-sm">
+                <strong>Vorschau:</strong> <span id="preview">KB001 - KB080</span>
+            </div>
+            
+            <div class="flex justify-end gap-3 pt-4">
+                <a href="{{ url_for('keyboards.index') }}" class="px-4 py-2 text-gray-600 hover:text-gray-800">Abbrechen</a>
+                <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                    Keyboards anlegen
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function updatePreview() {
+    const prefix = document.getElementById('prefix').value || 'KB';
+    const start = parseInt(document.getElementById('start').value) || 1;
+    const count = parseInt(document.getElementById('count').value) || 1;
+    const end = start + count - 1;
+    
+    const pad = (n) => String(n).padStart(3, '0');
+    document.getElementById('preview').textContent = `${prefix}${pad(start)} - ${prefix}${pad(end)}`;
+}
+
+document.getElementById('prefix').addEventListener('input', updatePreview);
+document.getElementById('start').addEventListener('input', updatePreview);
+document.getElementById('count').addEventListener('input', updatePreview);
+updatePreview();
+</script>
+{% endblock %}

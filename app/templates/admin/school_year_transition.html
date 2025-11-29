@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% block title %}Schuljahreswechsel - Keyboard-Ausleihe{% endblock %}
+
+{% block content %}
+<div class="space-y-6 max-w-3xl mx-auto">
+    <div class="flex items-center gap-4">
+        <a href="{{ url_for('admin.school_years') }}" class="text-gray-500 hover:text-gray-700">
+            ← Zurück
+        </a>
+        <h1 class="text-2xl font-bold text-gray-800">Schuljahreswechsel</h1>
+    </div>
+
+    <!-- Info-Box -->
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <h3 class="font-medium text-blue-800 mb-2">Was passiert beim Schuljahreswechsel?</h3>
+        <ul class="text-blue-700 text-sm space-y-1">
+            <li>• Die aktuellen <strong>5er-Klassen</strong> werden zu <strong>6er-Klassen</strong> im neuen Schuljahr</li>
+            <li>• Alle Schüler werden automatisch übernommen</li>
+            <li>• <strong>Aktive Ausleihen</strong> bleiben erhalten (5er behalten ihre Keyboards als 6er)</li>
+            <li>• Neue leere 5er-Klassen (5A-5D) werden angelegt</li>
+            <li>• Die alten 6er-Klassen bleiben archiviert im alten Schuljahr</li>
+        </ul>
+    </div>
+
+    <!-- Aktuelles Schuljahr -->
+    <div class="bg-white rounded-lg shadow p-6">
+        <h2 class="text-lg font-semibold mb-4">Aktuelles Schuljahr: {{ current_year.name }}</h2>
+        
+        <div class="grid grid-cols-2 gap-6">
+            <!-- Jahrgang 5 -->
+            <div class="bg-green-50 rounded-lg p-4">
+                <h3 class="font-medium text-green-800 mb-2">Jahrgang 5 → wird zu Jahrgang 6</h3>
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="text-left text-green-600">
+                            <th>Klasse</th>
+                            <th>Schüler</th>
+                            <th>Ausleihen</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for cls in classes_5 %}
+                        <tr>
+                            <td>{{ cls.name }}</td>
+                            <td>{{ cls.student_count }}</td>
+                            <td>{{ cls.loan_count }}</td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="3" class="text-gray-500">Keine Klassen</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                <p class="mt-2 text-green-700 font-medium">
+                    {{ active_loans_5 }} aktive Ausleihen werden übernommen
+                </p>
+            </div>
+            
+            <!-- Jahrgang 6 -->
+            <div class="bg-orange-50 rounded-lg p-4">
+                <h3 class="font-medium text-orange-800 mb-2">Jahrgang 6 → wird archiviert</h3>
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="text-left text-orange-600">
+                            <th>Klasse</th>
+                            <th>Schüler</th>
+                            <th>Offen</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for cls in classes_6 %}
+                        <tr>
+                            <td>{{ cls.name }}</td>
+                            <td>{{ cls.student_count }}</td>
+                            <td>{{ cls.loan_count }}</td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="3" class="text-gray-500">Keine Klassen</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% if active_loans_6 > 0 %}
+                <p class="mt-2 text-red-600 font-medium">
+                    ⚠️ {{ active_loans_6 }} Keyboards noch nicht zurückgegeben!
+                </p>
+                {% else %}
+                <p class="mt-2 text-green-700 font-medium">
+                    ✓ Alle Keyboards zurückgegeben
+                </p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Formular -->
+    <form method="POST" class="bg-white rounded-lg shadow p-6 space-y-4">
+        <h2 class="text-lg font-semibold">Neues Schuljahr anlegen</h2>
+        
+        <div class="grid grid-cols-3 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                <input type="text" name="new_year_name" 
+                    value="{{ form_data.new_year_name if form_data else suggested_name }}"
+                    placeholder="z.B. 2025/26" required
+                    class="w-full border rounded px-3 py-2">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Startdatum</label>
+                <input type="date" name="start_date" 
+                    value="{{ form_data.start_date if form_data else '' }}" required
+                    class="w-full border rounded px-3 py-2">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Enddatum</label>
+                <input type="date" name="end_date" 
+                    value="{{ form_data.end_date if form_data else '' }}" required
+                    class="w-full border rounded px-3 py-2">
+            </div>
+        </div>
+        
+        {% if show_confirm %}
+        <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+            <label class="flex items-center gap-2">
+                <input type="checkbox" name="confirm_6_open" value="1" class="rounded">
+                <span class="text-red-700">
+                    Ich bestätige, dass {{ active_loans_6 }} nicht zurückgegebene Keyboards 
+                    im Jahrgang 6 archiviert werden sollen.
+                </span>
+            </label>
+        </div>
+        {% endif %}
+        
+        <div class="flex justify-end gap-4 pt-4">
+            <a href="{{ url_for('admin.school_years') }}" class="px-4 py-2 text-gray-600 hover:underline">
+                Abbrechen
+            </a>
+            <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 font-medium">
+                Schuljahreswechsel durchführen
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

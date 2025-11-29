@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% block title %}Keyboards - Keyboard-Ausleihe{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex justify-between items-center">
+        <h1 class="text-2xl font-bold text-gray-800">Keyboard-Inventar</h1>
+        {% if current_user.can_edit() %}
+        <div class="flex gap-2">
+            <a href="{{ url_for('keyboards.bulk_create') }}" class="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700">
+                Bulk-Anlage
+            </a>
+            <a href="{{ url_for('keyboards.new') }}" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                + Neues Keyboard
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Filter und Suche -->
+    <div class="bg-white p-4 rounded-lg shadow">
+        <form method="GET" class="flex flex-wrap gap-4 items-end">
+            <div>
+                <label class="block text-sm text-gray-600 mb-1">Suche</label>
+                <input type="text" name="q" value="{{ search }}" placeholder="Inv.-Nr. oder Notiz..."
+                    class="border rounded px-3 py-2 w-48">
+            </div>
+            <div>
+                <label class="block text-sm text-gray-600 mb-1">Status</label>
+                <select name="status" class="border rounded px-3 py-2">
+                    <option value="">Alle</option>
+                    {% for value, label in status_choices %}
+                    <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm text-gray-600 mb-1">Zustand</label>
+                <select name="condition" class="border rounded px-3 py-2">
+                    <option value="">Alle</option>
+                    {% for value, label in condition_choices %}
+                    <option value="{{ value }}" {% if condition_filter == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <!-- Sortierung beibehalten -->
+            <input type="hidden" name="sort" value="{{ sort }}">
+            <input type="hidden" name="order" value="{{ order }}">
+            <button type="submit" class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700">Filtern</button>
+            <a href="{{ url_for('keyboards.index') }}" class="text-gray-600 hover:underline py-2">Zurücksetzen</a>
+        </form>
+    </div>
+
+    <!-- Tabelle -->
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-50">
+                    <tr>
+                        {% macro sort_header(col, label) %}
+                        <th class="px-4 py-3 text-left text-sm font-medium text-gray-500">
+                            <a href="{{ url_for('keyboards.index', status=status_filter, condition=condition_filter, q=search, sort=col, order='desc' if sort == col and order == 'asc' else 'asc') }}" 
+                               class="hover:text-gray-700 flex items-center gap-1">
+                                {{ label }}
+                                {% if sort == col %}
+                                <span class="text-blue-600">{{ '▲' if order == 'asc' else '▼' }}</span>
+                                {% endif %}
+                            </a>
+                        </th>
+                        {% endmacro %}
+                        {{ sort_header('internal_number', 'Nr.') }}
+                        {{ sort_header('inventory_number', 'Inventarnummer') }}
+                        {{ sort_header('status', 'Status') }}
+                        {{ sort_header('condition', 'Zustand') }}
+                        <th class="px-4 py-3 text-left text-sm font-medium text-gray-500">Aktueller Ausleiher</th>
+                        <th class="px-4 py-3 text-left text-sm font-medium text-gray-500">Notizen</th>
+                        <th class="px-4 py-3 text-center text-sm font-medium text-gray-500">Aktionen</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    {% for kb in keyboards %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-3 text-gray-600">{{ kb.internal_number or '-' }}</td>
+                        <td class="px-4 py-3 font-mono font-medium">{{ kb.inventory_number }}</td>
+                        <td class="px-4 py-3">
+                            <span class="px-2 py-1 rounded text-xs font-medium
+                                {% if kb.status == 'im_lager' %}bg-green-100 text-green-800
+                                {% elif kb.status == 'ausgeliehen' %}bg-blue-100 text-blue-800
+                                {% elif kb.status == 'in_reparatur' %}bg-orange-100 text-orange-800
+                                {% else %}bg-red-100 text-red-800{% endif %}">
+                                {{ dict(status_choices)[kb.status] }}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3">
+                            <span class="px-2 py-1 rounded text-xs font-medium
+                                {% if kb.condition == 'in_ordnung' %}bg-green-100 text-green-800
+                                {% else %}bg-orange-100 text-orange-800{% endif %}">
+                                {{ dict(condition_choices)[kb.condition] }}
+                            </span>
+                        </td>
+                        <td class="px-4 py-3">
+                            {% if kb.current_loan %}
+                            <a href="{{ url_for('classes.detail', id=kb.current_loan.student.class_id) }}" class="text-blue-600 hover:underline">
+                                {{ kb.current_loan.student.full_name }}
+                            </a>
+                            <span class="text-gray-400 text-sm">({{ kb.current_loan.student.school_class.name }})</span>
+                            {% else %}
+                            <span class="text-gray-400">—</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3 text-sm text-gray-600">{{ kb.notes or '—' }}</td>
+                        <td class="px-4 py-3 text-center space-x-2">
+                            <a href="{{ url_for('keyboards.edit', id=kb.id) }}" class="text-blue-600 hover:underline text-sm">Bearbeiten</a>
+                            {% if current_user.is_admin() and not kb.current_loan %}
+                            <form method="POST" action="{{ url_for('keyboards.delete', id=kb.id) }}" class="inline" 
+                                  onsubmit="return confirm('Keyboard {{ kb.inventory_number }} wirklich löschen?')">
+                                <button type="submit" class="text-red-600 hover:underline text-sm">Löschen</button>
+                            </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="px-4 py-8 text-center text-gray-500">
+                            Keine Keyboards gefunden.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <p class="text-gray-500 text-sm">{{ keyboards|length }} Keyboards angezeigt</p>
+</div>
+{% endblock %}

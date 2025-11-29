@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}Ausleihen - Keyboard-Ausleihe{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex justify-between items-center">
+        <h1 class="text-2xl font-bold text-gray-800">Ausleihen</h1>
+        {% if current_user.can_edit() %}
+        <a href="{{ url_for('loans.new') }}" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+            + Neue Ausleihe
+        </a>
+        {% endif %}
+    </div>
+
+    <!-- Filter -->
+    <div class="bg-white p-4 rounded-lg shadow">
+        <form method="GET" class="flex flex-wrap gap-4 items-end">
+            <div>
+                <label class="block text-sm text-gray-600 mb-1">Status</label>
+                <select name="status" class="border rounded px-3 py-2">
+                    <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Aktiv</option>
+                    <option value="returned" {% if status_filter == 'returned' %}selected{% endif %}>Zurückgegeben</option>
+                    <option value="" {% if not status_filter %}selected{% endif %}>Alle</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm text-gray-600 mb-1">Klasse</label>
+                <select name="class_id" class="border rounded px-3 py-2">
+                    <option value="">Alle Klassen</option>
+                    {% for cls in classes %}
+                    <option value="{{ cls.id }}" {% if class_filter == cls.id|string %}selected{% endif %}>{{ cls.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit" class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700">Filtern</button>
+            <a href="{{ url_for('loans.index') }}" class="text-gray-600 hover:underline py-2">Zurücksetzen</a>
+        </form>
+    </div>
+
+    <!-- Tabelle -->
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-sm font-medium text-gray-500">Schüler</th>
+                        <th class="px-4 py-3 text-left text-sm font-medium text-gray-500">Klasse</th>
+                        <th class="px-4 py-3 text-left text-sm font-medium text-gray-500">Keyboard</th>
+                        <th class="px-4 py-3 text-left text-sm font-medium text-gray-500">Ausgeliehen am</th>
+                        <th class="px-4 py-3 text-left text-sm font-medium text-gray-500">Zurückgegeben</th>
+                        <th class="px-4 py-3 text-center text-sm font-medium text-gray-500">Gebühr</th>
+                        <th class="px-4 py-3 text-center text-sm font-medium text-gray-500">Aktionen</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    {% for loan in loans %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-3">{{ loan.student.full_name }}</td>
+                        <td class="px-4 py-3">
+                            <a href="{{ url_for('classes.detail', id=loan.student.class_id) }}" class="text-blue-600 hover:underline">
+                                {{ loan.student.school_class.name }}
+                            </a>
+                        </td>
+                        <td class="px-4 py-3 font-mono">{{ loan.keyboard.inventory_number }}</td>
+                        <td class="px-4 py-3 text-sm">{{ loan.loaned_at.strftime('%d.%m.%Y') }}</td>
+                        <td class="px-4 py-3 text-sm">
+                            {% if loan.returned_at %}
+                            <span class="text-green-600">{{ loan.returned_at.strftime('%d.%m.%Y') }}</span>
+                            {% else %}
+                            <span class="text-gray-400">—</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3 text-center">
+                            {% if loan.fee_paid %}
+                            <span class="bg-green-100 text-green-800 px-2 py-1 rounded text-xs">Bezahlt</span>
+                            {% else %}
+                            <span class="bg-red-100 text-red-800 px-2 py-1 rounded text-xs">Offen</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3 text-center">
+                            {% if not loan.returned_at %}
+                            <a href="{{ url_for('loans.return_keyboard', id=loan.id) }}" class="text-orange-600 hover:underline text-sm">Rückgabe</a>
+                            {% else %}
+                            <span class="text-gray-400">—</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="px-4 py-8 text-center text-gray-500">
+                            Keine Ausleihen gefunden.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <p class="text-gray-500 text-sm">{{ loans|length }} Ausleihen angezeigt</p>
+</div>
+{% endblock %}

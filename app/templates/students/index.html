@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}Schüler - Keyboard-Ausleihe{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex justify-between items-center">
+        <h1 class="text-2xl font-bold text-gray-800">Schüler</h1>
+        {% if current_user.can_edit() %}
+        <div class="flex gap-2">
+            <a href="{{ url_for('students.import_csv') }}" class="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700">
+                CSV Import
+            </a>
+            <a href="{{ url_for('students.new') }}" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                + Neuer Schüler
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Filter -->
+    <div class="bg-white p-4 rounded-lg shadow">
+        <form method="GET" class="flex flex-wrap gap-4 items-end">
+            <div>
+                <label class="block text-sm text-gray-600 mb-1">Klasse</label>
+                <select name="class_id" class="border rounded px-3 py-2">
+                    <option value="">Alle Klassen</option>
+                    {% for cls in classes %}
+                    <option value="{{ cls.id }}" {% if class_filter == cls.id|string %}selected{% endif %}>{{ cls.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit" class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700">Filtern</button>
+            <a href="{{ url_for('students.index') }}" class="text-gray-600 hover:underline py-2">Zurücksetzen</a>
+        </form>
+    </div>
+
+    <!-- Tabelle -->
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-sm font-medium text-gray-500">Name</th>
+                        <th class="px-4 py-3 text-left text-sm font-medium text-gray-500">Klasse</th>
+                        <th class="px-4 py-3 text-left text-sm font-medium text-gray-500">Keyboard</th>
+                        <th class="px-4 py-3 text-left text-sm font-medium text-gray-500">Notizen</th>
+                        <th class="px-4 py-3 text-center text-sm font-medium text-gray-500">Aktionen</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    {% for student in students %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-3">
+                            <span class="font-medium">{{ student.last_name }}</span>, {{ student.first_name }}
+                        </td>
+                        <td class="px-4 py-3">
+                            <a href="{{ url_for('classes.detail', id=student.class_id) }}" class="text-blue-600 hover:underline">
+                                {{ student.school_class.name }}
+                            </a>
+                        </td>
+                        <td class="px-4 py-3">
+                            {% if student.current_keyboard %}
+                            <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm font-mono">
+                                {{ student.current_keyboard.inventory_number }}
+                            </span>
+                            {% else %}
+                            <span class="text-gray-400">—</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3 text-sm text-gray-600">{{ student.notes or '—' }}</td>
+                        <td class="px-4 py-3 text-center">
+                            <a href="{{ url_for('students.edit', id=student.id) }}" class="text-blue-600 hover:underline text-sm">Bearbeiten</a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" class="px-4 py-8 text-center text-gray-500">
+                            Keine Schüler gefunden.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <p class="text-gray-500 text-sm">{{ students|length }} Schüler angezeigt</p>
+</div>
+{% endblock %}

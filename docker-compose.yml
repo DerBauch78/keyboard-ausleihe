@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  keyboard-ausleihe:
+    build: .
+    container_name: keyboard-ausleihe
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    volumes:
+      - keyboard_data:/app/data
+      - ./uploads:/app/uploads
+    environment:
+      - SECRET_KEY=${SECRET_KEY:-bitte-in-env-datei-aendern}
+      - DATABASE_URL=sqlite:////app/data/keyboards.db
+      - FLASK_ENV=${FLASK_ENV:-production}
+
+volumes:
+  keyboard_data:

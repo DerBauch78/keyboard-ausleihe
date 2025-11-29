@@ -1,0 +1,447 @@
+{% extends "base.html" %}
+{% block title %}{{ school_class.name }} - Keyboard-Ausleihe{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex justify-between items-start">
+        <div>
+            <a href="{{ url_for('classes.index') }}" class="text-blue-600 hover:underline text-sm">← Zurück zur Übersicht</a>
+            <h1 class="text-2xl font-bold text-gray-800 mt-2">
+                Klasse {{ school_class.name }}
+                {% if school_class.grade == 5 %}
+                <span class="text-green-600 text-lg">(Ausleihe)</span>
+                {% else %}
+                <span class="text-orange-600 text-lg">(Rückgabe)</span>
+                {% endif %}
+            </h1>
+            {% if school_class.class_teacher %}
+            <p class="text-gray-600">Klassenlehrer: {{ school_class.class_teacher }}</p>
+            {% endif %}
+        </div>
+        <div class="flex gap-2">
+            <a href="{{ url_for('export.class_list', id=school_class.id) }}" 
+               class="bg-emerald-600 text-white px-4 py-2 rounded hover:bg-emerald-700 text-sm">
+                📥 Excel Export
+            </a>
+            <a href="{{ url_for('students.import_csv') }}?class_id={{ school_class.id }}" 
+               class="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 text-sm">
+                CSV Import
+            </a>
+            <a href="{{ url_for('classes.edit', id=school_class.id) }}" 
+               class="bg-gray-600 text-white px-4 py-2 rounded hover:bg-gray-700 text-sm">
+                Bearbeiten
+            </a>
+        </div>
+    </div>
+
+    <!-- Statistiken -->
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div class="bg-white p-4 rounded-lg shadow">
+            <div class="text-2xl font-bold text-gray-800">{{ total_students }}</div>
+            <div class="text-sm text-gray-500">Schüler gesamt</div>
+        </div>
+        {% if school_class.grade == 5 %}
+        <div class="bg-white p-4 rounded-lg shadow">
+            <div class="text-2xl font-bold text-purple-600">{{ participants }}</div>
+            <div class="text-sm text-gray-500">Nehmen teil</div>
+        </div>
+        {% endif %}
+        <div class="bg-white p-4 rounded-lg shadow">
+            <div class="text-2xl font-bold text-blue-600">{{ with_keyboard }}</div>
+            <div class="text-sm text-gray-500">Mit Keyboard</div>
+        </div>
+        <div class="bg-white p-4 rounded-lg shadow">
+            <div class="text-2xl font-bold text-green-600">{{ fees_paid }}</div>
+            <div class="text-sm text-gray-500">Bezahlt ({{ fees_paid * 10 }}€)</div>
+        </div>
+        <div class="bg-white p-4 rounded-lg shadow">
+            <div class="text-2xl font-bold text-red-600">{{ fees_unpaid }}</div>
+            <div class="text-sm text-gray-500">Offen ({{ fees_unpaid * 10 }}€)</div>
+        </div>
+    </div>
+
+    <!-- Schülerliste -->
+    <div class="bg-white rounded-lg shadow overflow-hidden">
+        <div class="px-6 py-4 border-b flex justify-between items-center">
+            <h2 class="text-lg font-semibold text-gray-800">Schülerliste</h2>
+            <a href="{{ url_for('students.new') }}?class_id={{ school_class.id }}" 
+               class="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700">
+                + Schüler hinzufügen
+            </a>
+        </div>
+        
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-sm font-medium text-gray-500">Name</th>
+                        {% if school_class.grade == 5 %}
+                        <th class="px-4 py-3 text-center text-sm font-medium text-gray-500">Nimmt teil</th>
+                        {% endif %}
+                        <th class="px-4 py-3 text-center text-sm font-medium text-gray-500">Gebühr (10€)</th>
+                        <th class="px-4 py-3 text-left text-sm font-medium text-gray-500">Keyboard</th>
+                        <th class="px-4 py-3 text-left text-sm font-medium text-gray-500">Anmerkungen</th>
+                        <th class="px-4 py-3 text-center text-sm font-medium text-gray-500">Aktionen</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    {% for student in students %}
+                    <tr class="hover:bg-gray-50" data-student-id="{{ student.id }}">
+                        <td class="px-4 py-3">
+                            <span class="font-medium">{{ student.last_name }}</span>, {{ student.first_name }}
+                        </td>
+                        
+                        {% if school_class.grade == 5 %}
+                        <!-- Nimmt teil Checkbox (nur 5er) -->
+                        <td class="px-4 py-3 text-center">
+                            <input type="checkbox" 
+                                   onchange="toggleParticipation({{ student.id }}, this)"
+                                   {% if student.participates_in_loan or student.current_loan %}checked{% endif %}
+                                   {% if student.current_loan %}disabled title="Bereits ausgeliehen"{% endif %}
+                                   class="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50">
+                        </td>
+                        {% endif %}
+                        
+                        <!-- Gebühr-Status -->
+                        <td class="px-4 py-3 text-center">
+                            {% if student.current_loan %}
+                            <!-- Hat Keyboard: Loan.fee_paid -->
+                            <button onclick="togglePaid({{ student.current_loan.id }}, this)"
+                                    class="px-3 py-1 rounded text-sm font-medium cursor-pointer transition
+                                    {% if student.current_loan.fee_paid %}
+                                    bg-green-100 text-green-800 hover:bg-green-200
+                                    {% else %}
+                                    bg-red-100 text-red-800 hover:bg-red-200
+                                    {% endif %}">
+                                {{ 'Bezahlt' if student.current_loan.fee_paid else 'Offen' }}
+                            </button>
+                            {% elif school_class.grade == 5 and student.participates_in_loan %}
+                            <!-- Nimmt teil aber noch kein Keyboard: fee_prepaid -->
+                            <button onclick="toggleFeePrepaid({{ student.id }}, this)"
+                                    class="px-3 py-1 rounded text-sm font-medium cursor-pointer transition
+                                    {% if student.fee_prepaid %}
+                                    bg-green-100 text-green-800 hover:bg-green-200
+                                    {% else %}
+                                    bg-red-100 text-red-800 hover:bg-red-200
+                                    {% endif %}">
+                                {{ 'Bezahlt' if student.fee_prepaid else 'Offen' }}
+                            </button>
+                            {% else %}
+                            <span class="text-gray-400">—</span>
+                            {% endif %}
+                        </td>
+                        
+                        <!-- Keyboard -->
+                        <td class="px-4 py-3">
+                            {% if student.current_loan %}
+                            <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm font-mono">
+                                {{ student.current_keyboard.inventory_number }}
+                            </span>
+                            {% else %}
+                            <span class="text-gray-400">—</span>
+                            {% endif %}
+                        </td>
+                        
+                        <!-- Anmerkungen -->
+                        <td class="px-4 py-3">
+                            <div class="notes-field cursor-pointer hover:bg-gray-100 rounded px-2 py-1 min-h-[28px]"
+                                 onclick="editNotes({{ student.id }}, this)"
+                                 data-student-id="{{ student.id }}">
+                                {% if student.notes %}
+                                <span class="text-gray-700">{{ student.notes }}</span>
+                                {% else %}
+                                <span class="text-gray-400 italic">Klicken zum Bearbeiten...</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        
+                        <!-- Aktionen -->
+                        <td class="px-4 py-3 text-center">
+                            {% if school_class.grade == 5 %}
+                                {% if student.current_loan %}
+                                <span class="text-green-600 text-sm">✓ Ausgeliehen</span>
+                                {% elif student.participates_in_loan %}
+                                <button onclick="showLoanModal({{ student.id }}, '{{ student.full_name }}')"
+                                        class="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700">
+                                    Keyboard zuweisen
+                                </button>
+                                {% else %}
+                                <span class="text-gray-400 text-sm">—</span>
+                                {% endif %}
+                            {% else %}
+                                {% if student.current_loan %}
+                                <button onclick="showReturnModal({{ student.current_loan.id }}, '{{ student.full_name }}', '{{ student.current_keyboard.inventory_number }}')"
+                                        class="bg-orange-600 text-white px-3 py-1 rounded text-sm hover:bg-orange-700">
+                                    Rückgabe
+                                </button>
+                                {% elif student.last_loan and student.last_loan.returned_at %}
+                                <div class="flex items-center justify-center gap-2">
+                                    <span class="text-green-600 text-sm">✓ {{ student.last_loan.keyboard.inventory_number }}</span>
+                                    <button onclick="undoReturn({{ student.last_loan.id }}, '{{ student.full_name }}', '{{ student.last_loan.keyboard.inventory_number }}')"
+                                            class="text-gray-400 hover:text-red-600 text-xs" title="Rückgabe stornieren">
+                                        ↩
+                                    </button>
+                                </div>
+                                {% else %}
+                                <span class="text-gray-400 text-sm">—</span>
+                                {% endif %}
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="{% if school_class.grade == 5 %}6{% else %}5{% endif %}" class="px-4 py-8 text-center text-gray-500">
+                            Keine Schüler in dieser Klasse. 
+                            <a href="{{ url_for('students.import_csv') }}" class="text-blue-600 hover:underline">CSV importieren</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Ausleihe Modal -->
+<div id="loanModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-white rounded-lg p-6 w-full max-w-md">
+        <h3 class="text-lg font-bold mb-4">Keyboard ausleihen</h3>
+        <p class="mb-4">Schüler: <strong id="loanStudentName"></strong></p>
+        <input type="hidden" id="loanStudentId">
+        
+        <label class="block text-sm font-medium text-gray-700 mb-2">Keyboard auswählen:</label>
+        <select id="loanKeyboardSelect" class="w-full border rounded px-3 py-2 mb-4">
+            <option value="">Bitte wählen...</option>
+            {% for kb in available_keyboards %}
+            <option value="{{ kb.id }}">{{ kb.inventory_number }}{% if kb.internal_number %} (Nr. {{ kb.internal_number }}){% endif %}</option>
+            {% endfor %}
+        </select>
+        
+        <div class="flex justify-end gap-3">
+            <button onclick="closeLoanModal()" class="px-4 py-2 text-gray-600 hover:text-gray-800">Abbrechen</button>
+            <button onclick="submitLoan()" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Ausleihen</button>
+        </div>
+    </div>
+</div>
+
+<!-- Rückgabe Modal -->
+<div id="returnModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-white rounded-lg p-6 w-full max-w-md">
+        <h3 class="text-lg font-bold mb-4">Keyboard zurückgeben</h3>
+        <p class="mb-2">Schüler: <strong id="returnStudentName"></strong></p>
+        <p class="mb-4">Keyboard: <strong id="returnKeyboardNumber"></strong></p>
+        <input type="hidden" id="returnLoanId">
+        
+        <label class="block text-sm font-medium text-gray-700 mb-2">Zustand bei Rückgabe:</label>
+        <select id="returnCondition" class="w-full border rounded px-3 py-2 mb-4">
+            {% for value, label in condition_choices %}
+            <option value="{{ value }}">{{ label }}</option>
+            {% endfor %}
+        </select>
+        
+        <div class="flex justify-end gap-3">
+            <button onclick="closeReturnModal()" class="px-4 py-2 text-gray-600 hover:text-gray-800">Abbrechen</button>
+            <button onclick="submitReturn()" class="bg-orange-600 text-white px-4 py-2 rounded hover:bg-orange-700">Zurückgeben</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Teilnahme umschalten (5er)
+async function toggleParticipation(studentId, checkbox) {
+    try {
+        const res = await fetch(`/students/${studentId}/toggle-participation`, { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+            // Seite neu laden um UI zu aktualisieren
+            location.reload();
+        } else {
+            checkbox.checked = !checkbox.checked; // Zurücksetzen
+            alert(data.error || 'Fehler beim Aktualisieren');
+        }
+    } catch (e) {
+        checkbox.checked = !checkbox.checked;
+        alert('Fehler beim Aktualisieren');
+    }
+}
+
+// Gebühr-Vorauszahlung umschalten (Schüler ohne Keyboard)
+async function toggleFeePrepaid(studentId, btn) {
+    try {
+        const res = await fetch(`/students/${studentId}/toggle-fee-paid`, { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+            btn.textContent = data.fee_paid ? 'Bezahlt' : 'Offen';
+            btn.className = btn.className.replace(/bg-\w+-100|text-\w+-800|hover:bg-\w+-200/g, '');
+            if (data.fee_paid) {
+                btn.classList.add('bg-green-100', 'text-green-800', 'hover:bg-green-200');
+            } else {
+                btn.classList.add('bg-red-100', 'text-red-800', 'hover:bg-red-200');
+            }
+        }
+    } catch (e) {
+        alert('Fehler beim Aktualisieren');
+    }
+}
+
+// Bezahlstatus umschalten (Schüler mit Keyboard)
+async function togglePaid(loanId, btn) {
+    try {
+        const res = await fetch(`/loans/${loanId}/toggle-paid`, { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+            btn.textContent = data.fee_paid ? 'Bezahlt' : 'Offen';
+            btn.className = btn.className.replace(/bg-\w+-100|text-\w+-800|hover:bg-\w+-200/g, '');
+            if (data.fee_paid) {
+                btn.classList.add('bg-green-100', 'text-green-800', 'hover:bg-green-200');
+            } else {
+                btn.classList.add('bg-red-100', 'text-red-800', 'hover:bg-red-200');
+            }
+        }
+    } catch (e) {
+        alert('Fehler beim Aktualisieren');
+    }
+}
+
+// Anmerkungen bearbeiten
+function editNotes(studentId, elem) {
+    const currentText = elem.querySelector('span').textContent;
+    const isPlaceholder = elem.querySelector('span').classList.contains('italic');
+    
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = isPlaceholder ? '' : currentText;
+    input.className = 'w-full border rounded px-2 py-1';
+    input.placeholder = 'Anmerkung eingeben...';
+    
+    elem.innerHTML = '';
+    elem.appendChild(input);
+    input.focus();
+    
+    const saveNotes = async () => {
+        const newNotes = input.value.trim();
+        try {
+            const res = await fetch(`/students/${studentId}/update-notes`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ notes: newNotes })
+            });
+            const data = await res.json();
+            if (data.success) {
+                elem.innerHTML = data.notes 
+                    ? `<span class="text-gray-700">${data.notes}</span>`
+                    : '<span class="text-gray-400 italic">Klicken zum Bearbeiten...</span>';
+            }
+        } catch (e) {
+            alert('Fehler beim Speichern');
+            location.reload();
+        }
+    };
+    
+    input.onblur = saveNotes;
+    input.onkeypress = (e) => { if (e.key === 'Enter') input.blur(); };
+}
+
+// Ausleihe Modal
+function showLoanModal(studentId, studentName) {
+    document.getElementById('loanStudentId').value = studentId;
+    document.getElementById('loanStudentName').textContent = studentName;
+    document.getElementById('loanKeyboardSelect').value = '';
+    document.getElementById('loanModal').classList.remove('hidden');
+    document.getElementById('loanModal').classList.add('flex');
+}
+
+function closeLoanModal() {
+    document.getElementById('loanModal').classList.add('hidden');
+    document.getElementById('loanModal').classList.remove('flex');
+}
+
+async function submitLoan() {
+    const studentId = document.getElementById('loanStudentId').value;
+    const keyboardId = document.getElementById('loanKeyboardSelect').value;
+    
+    if (!keyboardId) {
+        alert('Bitte ein Keyboard auswählen');
+        return;
+    }
+    
+    try {
+        const res = await fetch('/loans/quick-loan', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ student_id: studentId, keyboard_id: keyboardId })
+        });
+        const data = await res.json();
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(data.error || 'Fehler bei der Ausleihe');
+        }
+    } catch (e) {
+        alert('Fehler bei der Ausleihe');
+    }
+}
+
+// Rückgabe Modal
+function showReturnModal(loanId, studentName, keyboardNumber) {
+    document.getElementById('returnLoanId').value = loanId;
+    document.getElementById('returnStudentName').textContent = studentName;
+    document.getElementById('returnKeyboardNumber').textContent = keyboardNumber;
+    document.getElementById('returnCondition').value = 'in_ordnung';
+    document.getElementById('returnModal').classList.remove('hidden');
+    document.getElementById('returnModal').classList.add('flex');
+}
+
+function closeReturnModal() {
+    document.getElementById('returnModal').classList.add('hidden');
+    document.getElementById('returnModal').classList.remove('flex');
+}
+
+async function submitReturn() {
+    const loanId = document.getElementById('returnLoanId').value;
+    const condition = document.getElementById('returnCondition').value;
+    
+    try {
+        const res = await fetch('/loans/quick-return', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ loan_id: loanId, condition: condition })
+        });
+        const data = await res.json();
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(data.error || 'Fehler bei der Rückgabe');
+        }
+    } catch (e) {
+        alert('Fehler bei der Rückgabe');
+    }
+}
+
+// Rückgabe stornieren
+async function undoReturn(loanId, studentName, keyboardNumber) {
+    if (!confirm(`Rückgabe stornieren?\n\nKeyboard ${keyboardNumber} wird wieder an ${studentName} als ausgeliehen markiert.`)) {
+        return;
+    }
+    
+    try {
+        const res = await fetch('/loans/api/undo-return', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ loan_id: loanId })
+        });
+        const data = await res.json();
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(data.error || 'Fehler beim Stornieren');
+        }
+    } catch (e) {
+        alert('Fehler beim Stornieren');
+    }
+}
+</script>
+{% endblock %}

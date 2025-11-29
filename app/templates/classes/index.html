@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block title %}Klassen - Keyboard-Ausleihe{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex justify-between items-center">
+        <h1 class="text-2xl font-bold text-gray-800">Klassenübersicht</h1>
+        {% if current_user.can_edit() %}
+        <a href="{{ url_for('classes.new') }}" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+            + Neue Klasse
+        </a>
+        {% endif %}
+    </div>
+
+    {% if not active_year %}
+    <div class="bg-yellow-100 border border-yellow-300 text-yellow-800 p-4 rounded">
+        <strong>Hinweis:</strong> Kein aktives Schuljahr. Bitte zuerst in der 
+        <a href="{{ url_for('admin.school_years') }}" class="underline">Administration</a> ein Schuljahr aktivieren.
+    </div>
+    {% endif %}
+
+    <div class="grid md:grid-cols-2 gap-6">
+        <!-- Jahrgang 5 -->
+        <div class="bg-white rounded-lg shadow overflow-hidden">
+            <div class="bg-green-600 text-white px-6 py-4">
+                <h2 class="text-xl font-bold">🎹 Jahrgang 5 - Neue Ausleihen</h2>
+                <p class="text-green-100 text-sm">Schüler leihen Keyboards aus</p>
+            </div>
+            <div class="p-4">
+                {% if classes_5 %}
+                <div class="space-y-3">
+                    {% for cls in classes_5 %}
+                    <a href="{{ url_for('classes.detail', id=cls.id) }}" 
+                       class="block p-4 bg-green-50 hover:bg-green-100 rounded-lg border border-green-200 transition">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <span class="text-xl font-bold text-green-800">{{ cls.name }}</span>
+                                {% if cls.class_teacher %}
+                                <span class="text-sm text-gray-500 ml-2">({{ cls.class_teacher }})</span>
+                                {% endif %}
+                            </div>
+                            <span class="text-2xl">→</span>
+                        </div>
+                        <div class="mt-2 grid grid-cols-3 gap-2 text-sm">
+                            <div>
+                                <span class="text-gray-500">Schüler:</span>
+                                <span class="font-medium">{{ cls.student_count }}</span>
+                            </div>
+                            <div>
+                                <span class="text-gray-500">Ausgeliehen:</span>
+                                <span class="font-medium text-blue-600">{{ cls.loan_count }}</span>
+                            </div>
+                            <div>
+                                <span class="text-gray-500">Bezahlt:</span>
+                                <span class="font-medium {% if cls.paid_count == cls.loan_count and cls.loan_count > 0 %}text-green-600{% else %}text-orange-600{% endif %}">
+                                    {{ cls.paid_count }}/{{ cls.loan_count }}
+                                </span>
+                            </div>
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-gray-500 text-center py-4">Keine Klassen vorhanden</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Jahrgang 6 -->
+        <div class="bg-white rounded-lg shadow overflow-hidden">
+            <div class="bg-orange-600 text-white px-6 py-4">
+                <h2 class="text-xl font-bold">📦 Jahrgang 6 - Rückgaben</h2>
+                <p class="text-orange-100 text-sm">Keyboards werden zurückgegeben</p>
+            </div>
+            <div class="p-4">
+                {% if classes_6 %}
+                <div class="space-y-3">
+                    {% for cls in classes_6 %}
+                    <a href="{{ url_for('classes.detail', id=cls.id) }}" 
+                       class="block p-4 bg-orange-50 hover:bg-orange-100 rounded-lg border border-orange-200 transition">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <span class="text-xl font-bold text-orange-800">{{ cls.name }}</span>
+                                {% if cls.class_teacher %}
+                                <span class="text-sm text-gray-500 ml-2">({{ cls.class_teacher }})</span>
+                                {% endif %}
+                            </div>
+                            <span class="text-2xl">→</span>
+                        </div>
+                        <div class="mt-2 grid grid-cols-3 gap-2 text-sm">
+                            <div>
+                                <span class="text-gray-500">Schüler:</span>
+                                <span class="font-medium">{{ cls.student_count }}</span>
+                            </div>
+                            <div>
+                                <span class="text-gray-500">Noch offen:</span>
+                                <span class="font-medium text-orange-600">{{ cls.loan_count }}</span>
+                            </div>
+                            <div>
+                                <span class="text-gray-500">Zurück:</span>
+                                <span class="font-medium text-green-600">{{ cls.returned_count }}</span>
+                            </div>
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-gray-500 text-center py-4">Keine Klassen vorhanden</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
