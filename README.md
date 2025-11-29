@@ -23,7 +23,7 @@ Web-Anwendung zur Verwaltung der jährlichen Keyboard-Ausleihe an Schulen.
 
 ```bash
 # Repository klonen
-git clone https://github.com/DEINUSER/keyboard-ausleihe.git
+git clone https://github.com/DerBauch78/keyboard-ausleihe.git
 cd keyboard-ausleihe
 
 # Environment-Datei erstellen
