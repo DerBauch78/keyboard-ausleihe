@@ -90,6 +90,12 @@
                     <tr class="hover:bg-gray-50" data-student-id="{{ student.id }}">
                         <td class="px-4 py-3">
                             <span class="font-medium">{{ student.last_name }}</span>, {{ student.first_name }}
+                            {% if current_user.is_admin() and not student.current_loan %}
+                            <form method="POST" action="{{ url_for('students.delete', id=student.id) }}" class="inline ml-2"
+                                  onsubmit="return confirm('Schüler {{ student.full_name }} wirklich löschen?')">
+                                <button type="submit" class="text-gray-300 hover:text-red-600 text-sm" title="Schüler löschen">🗑️</button>
+                            </form>
+                            {% endif %}
                         </td>
                         
                         {% if school_class.grade == 5 %}

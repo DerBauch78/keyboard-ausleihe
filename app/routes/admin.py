@@ -123,6 +123,39 @@ def activate_school_year(id):
     return redirect(url_for('admin.school_years'))
 
 
+@admin_bp.route('/school-years/<int:id>/delete', methods=['POST'])
+@login_required
+@admin_required
+def delete_school_year(id):
+    year = SchoolYear.query.get_or_404(id)
+    
+    if year.is_active:
+        flash('Das aktive Schuljahr kann nicht gelöscht werden.', 'error')
+        return redirect(url_for('admin.school_years'))
+    
+    # Prüfen ob noch Klassen mit Schülern existieren
+    has_students = False
+    for cls in year.classes:
+        if cls.students.count() > 0:
+            has_students = True
+            break
+    
+    if has_students:
+        flash('Schuljahr enthält noch Klassen mit Schülern. Bitte zuerst Schüler löschen.', 'error')
+        return redirect(url_for('admin.school_years'))
+    
+    # Leere Klassen löschen
+    for cls in year.classes:
+        db.session.delete(cls)
+    
+    name = year.name
+    db.session.delete(year)
+    db.session.commit()
+    
+    flash(f'Schuljahr {name} wurde gelöscht.', 'success')
+    return redirect(url_for('admin.school_years'))
+
+
 # --- Benutzer ---
 
 @admin_bp.route('/users')
